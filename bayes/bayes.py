@@ -202,8 +202,10 @@ def rss_test(feed0, feed1):
         if classifyNB(wordVector, p0V, p1V, pSpam) != classList[i]:
             error += 1
             print 'error', docList[i]
-    print 'error rate:', float(error) / len(testSet)
-    return  float(error) / len(testSet)
+    f = open('report/error_rate', 'w')
+    f.write('error rate: {0}\n'.format(float(error) / len(testSet)))
+    #return  float(error) / len(testSet)
+    return p1V, p0V, vocabList
 
 def pickdump(filename, feed):
     fw = open(filename, 'wb')
@@ -219,35 +221,57 @@ def pickload(filename):
         
 def save_rss():
     import  pickle
-    #feed0 = feedparser.parse('http://www.nasa.gov/rss/dyn/image_of_the_day.rss')
-    #feed1 = feedparser.parse('http://sports.yahoo.com/nba/teams/hou/rss.xml')
+    feed0 = feedparser.parse('http://www.nasa.gov/rss/dyn/image_of_the_day.rss')
     feed1 = feedparser.parse('http://feeds.newscientist.com/science-news')
-    #pickdump('feed0', feed0)
-
-    pickdump('feed1', feed1)
+    pickdump('report/feed0', feed0)
+    pickdump('report/feed1', feed1)
+    printrss()
 
 def printrss():
-    feed0 = pickload('feed0')
-    feed1 = pickload('feed1')
+    feed0 = pickload('report/feed0')
+    feed1 = pickload('report/feed1')
+    fw = open('report/feed0.txt', 'w')
     for i in range(len(feed0['entries'])):
-        print feed0['entries'][i]['summary'].encode('utf-8')
-    print '-'* 10
+        fw.write(feed0['entries'][i]['summary'].encode('utf-8') + '\n')
+    fw.close()
+
+    fw = open('report/feed1.txt', 'w')
     for i in range(len(feed1['entries'])):
-        print feed1['entries'][i]['summary'].encode('utf-8')
+        fw.write(feed1['entries'][i]['summary'].encode('utf-8') + '\n')
+    fw.close()
+
+def getTopWords():
+    feed0 = pickload('report/feed0')
+    feed1 = pickload('report/feed1')
+    p1V, p0V, vocabList = rss_test(feed0, feed1)
+    top0 = []
+    top1 = []
+    for i in range(len(p0V)):
+        if p0V[i] > -6.0 : top0.append((vocabList[i], p0V[i]))
+        if p1V[i] > -6.0 : top1.append((vocabList[i], p1V[i]))
+
+    sorted0 = sorted(top0, key=lambda x:x[1], reverse=True)
+    sorted1= sorted(top1, key=lambda x:x[1], reverse=True)
+
+    fw = open('report/feed0.topword', 'w')
+    for item in sorted0:
+        fw.write(item[0] + '\n')
+    fw.close()
+
+    fw = open('report/feed1.topword', 'w')
+    for item in sorted1:
+        fw.write(item[0] +  '\n')
+    fw.close()
+
+def test_rss():
+
+    feed0 = pickload('report/feed0')
+    feed1 = pickload('report/feed1')
+    rss_test(feed0, feed1)
 
 
 if __name__ == '__main__':
     #email_test()
-
-    #save_rss()
-    #printrss()
-    feed0 = pickload('feed0')
-    feed1 = pickload('feed1')
-    total = 0
-    num = 0
-    for i in range(10):
-
-        err_rate = rss_test(feed0, feed1)
-        num += 1
-        total += err_rate
-    print total/num
+    save_rss()
+    test_rss()
+    getTopWords()
